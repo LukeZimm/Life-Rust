@@ -5,6 +5,11 @@ use kiss3d::light::Light;
 use kiss3d::nalgebra::{Point2, Point3, Translation2};
 use kiss3d::window::Window;
 
+mod chunk;
+mod game;
+
+use game::Game;
+
 use std::io::{stdin, stdout, Write};
 use std::thread::sleep;
 use std::time::Duration;
@@ -12,26 +17,28 @@ use std::time::Duration;
 fn main() {
     let mut window = Window::new("Conway's Game of Life");
     window.set_light(Light::StickToCamera);
-    let mut bytes: [u8; 8] = [
-        0b0000_0000,
-        0b0100_0000,
-        0b0001_0000,
-        0b1100_1110,
-        0b0000_0000,
+    let mut game = Game::from([
+        0b0000_0010,
+        0b1110_0100,
+        0b0000_0111,
         0b0000_0000,
         0b0000_0000,
         0b0000_0000,
-    ];
+        0b0000_0000,
+        0b0000_0000,
+    ]);
 
-    let mut nodes: Vec<kiss3d::scene::PlanarSceneNode> = Vec::new();
-    draw_chunk(bytes, &mut window, &mut nodes);
+    // let mut nodes: Vec<kiss3d::scene::PlanarSceneNode> = Vec::new();
+    // draw_chunk(bytes, &mut window, &mut nodes);
+    game.draw(&mut window);
     while window.render() {
-        remove_nodes(&mut window, &mut nodes);
-        draw_chunk(bytes, &mut window, &mut nodes);
+        game.draw(&mut window);
+        game.iterate();
+        /* draw_chunk(bytes, &mut window, &mut nodes); */
 
-        bytes = iterate(bytes);
+        // bytes = iterate(bytes);
         // pause();
-        std::thread::sleep(Duration::from_millis(100));
+        sleep(Duration::from_millis(100));
     }
     /* loop {
         println!();
@@ -61,27 +68,26 @@ fn draw_chunk(
     for i in 0..8 {
         draw_byte(chunk[i], i, window, nodes);
     }
-    let mut c = window.draw_planar_line(
+    window.draw_planar_line(
         &Point2::new(-35.5, -35.5),
         &Point2::new(-35.5, 45.5),
         &Point3::new(0.0, 1.0, 0.0),
     );
-    let mut c = window.draw_planar_line(
+    window.draw_planar_line(
         &Point2::new(-35.5, -35.5),
         &Point2::new(45.5, -35.5),
         &Point3::new(0.0, 1.0, 0.0),
     );
-    let mut c = window.draw_planar_line(
+    window.draw_planar_line(
         &Point2::new(-35.5, 45.5),
         &Point2::new(45.5, 45.5),
         &Point3::new(0.0, 1.0, 0.0),
     );
-    let mut c = window.draw_planar_line(
+    window.draw_planar_line(
         &Point2::new(45.5, 45.5),
         &Point2::new(45.5, -35.5),
         &Point3::new(0.0, 1.0, 0.0),
     );
-    // nodes.push(c);
 }
 
 fn draw_byte(
@@ -175,23 +181,3 @@ fn pause() {
     stdin().read_line(&mut String::new()).unwrap();
     stdout.flush().unwrap();
 }
-
-// fn render(chunk: [u8; 8], args: &RenderArgs, gl: &mut GlGraphics) {
-//     use graphics::*;
-
-//     const GREEN: [f32; 4] = [0.0, 1.0, 0.0, 1.0];
-//     const RED: [f32; 4] = [1.0, 0.0, 0.0, 1.0];
-
-//     let square = rectangle::square(0.0, 0.0, 50.0);
-//     let (x, y) = (args.window_size[0] / 2.0, args.window_size[1] / 2.0);
-
-//     gl.draw(args.viewport(), |c, gl| {
-//         // Clear the screen.
-//         clear(GREEN, gl);
-
-//         let transform = c.transform.trans(x, y).trans(-25.0, -25.0);
-
-//         // Draw a box rotating around the middle of the screen.
-//         rectangle(RED, square, transform, gl);
-//     });
-// }
