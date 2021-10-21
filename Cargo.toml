@@ -7,4 +7,5 @@ edition = "2018"
 
 [dependencies]
 bytes = "*"
-#skulpin = "0.14.0"
+kiss3d = "*"
+nalgebra = "*"
