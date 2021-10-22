@@ -17,7 +17,7 @@ impl Game {
         Game { map }
     }
     pub fn draw(&mut self, window: &mut kiss3d::window::Window) {
-        for mut i in self.chunks() {
+        for i in self.chunks() {
             match i {
                 Some(j) => j.draw(window),
                 None => {}
@@ -32,7 +32,7 @@ impl Game {
         vec
     }
     pub fn iterate(&mut self) {
-        for mut i in self.chunks() {
+        for i in self.chunks() {
             match i {
                 Some(j) => {
                     j.iterate();
