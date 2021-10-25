@@ -7,6 +7,7 @@ use kiss3d::window::Window;
 mod chunk;
 mod game;
 
+use chunk::Chunk;
 use game::Game;
 
 use std::thread::sleep;
@@ -25,6 +26,23 @@ fn main() {
         0b0000_0000,
         0b0000_0000,
     ]);
+    game.insert_chunk(
+        [1, 0],
+        Chunk::from(
+            [1, 0],
+            [
+                0b0000_0000,
+                0b0000_0000,
+                0b0000_0000,
+                0b0000_0000,
+                0b0000_0000,
+                0b0000_0000,
+                0b0000_0000,
+                0b0000_0111,
+            ],
+        ),
+    );
+    println!("{}", game.map.get(&[0, 0]).unwrap().left());
 
     game.draw(&mut window);
     while window.render() {
