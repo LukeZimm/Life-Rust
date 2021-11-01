@@ -137,6 +137,19 @@ impl Chunk {
                             count += 1;
                         }
                     } else {
+                        // corner case
+                        if point.1 + y == -1 {
+                            // top corner
+                            if Chunk::get_bit_at(edges.corners, 2) {
+                                count += 1;
+                            }
+                        }
+                        if point.1 + y == 8 {
+                            // bottom corner
+                            if Chunk::get_bit_at(edges.corners, 0) {
+                                count += 1;
+                            }
+                        }
                     }
                     continue;
                 }
@@ -147,6 +160,19 @@ impl Chunk {
                             count += 1;
                         }
                     } else {
+                        // corner case
+                        if point.1 + y == -1 {
+                            // top corner
+                            if Chunk::get_bit_at(edges.corners, 3) {
+                                count += 1;
+                            }
+                        }
+                        if point.1 + y == 8 {
+                            // bottom corner
+                            if Chunk::get_bit_at(edges.corners, 1) {
+                                count += 1;
+                            }
+                        }
                     }
                     continue;
                 }

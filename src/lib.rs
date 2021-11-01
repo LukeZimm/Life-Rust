@@ -200,37 +200,30 @@ mod tests {
             0b0000_0000,
             0b1000_0001,
         ]);
-        game.insert_chunk(
-            [-1, 0],
-            Chunk::from([-1, 0], [0; 8])
-                .set_bit((7, 0), true)
-                .set_bit((7, 7), true),
-        );
-        game.insert_chunk(
-            [1, 0],
-            Chunk::from([1, 0], [0; 8])
-                .set_bit((0, 0), true)
-                .set_bit((0, 7), true),
-        );
-        game.insert_chunk([-1, 1], Chunk::from([-1, 1], [0; 8]).set_bit((7, 7), true));
-        game.insert_chunk([1, -1], Chunk::from([1, -1], [0; 8]).set_bit((0, 7), true));
-        game.insert_chunk(
-            [-1, -1],
-            Chunk::from([-1, -1], [0; 8]).set_bit((7, 0), true),
-        );
-        game.insert_chunk([1, 1], Chunk::from([1, 1], [0; 8]).set_bit((0, 0), true));
-
+        game.insert_chunk([-1, -1], Chunk::new([-1, -1]).set_bit((7, 0), true));
+        game.insert_chunk([1, -1], Chunk::new([1, -1]).set_bit((0, 0), true));
+        game.insert_chunk([-1, 1], Chunk::new([-1, 1]).set_bit((7, 7), true));
+        game.insert_chunk([1, 1], Chunk::new([1, 1]).set_bit((0, 7), true));
         let corners = game.corners([0, 0]);
-        for j in 0..8 {
-            print!("{}", if Chunk::get_bit_at(corners, j) { 1 } else { 0 });
-        }
-        panic!();
-        /* game.iterate();
-        let c = game.map.get(&[0, 0]).unwrap();
-        assert_eq!(c.get_bit_at_point((0, 0)), true);
-        assert_eq!(c.get_bit_at_point((7, 0)), true);
-        assert_eq!(c.get_bit_at_point((0, 7)), true);
-        assert_eq!(c.get_bit_at_point((7, 7)), true);  */
+        assert_eq!(corners, 0b1111_0000);
+        game.insert_chunk([-1, -1], Chunk::new([-1, -1]).set_bit((7, 0), false));
+        game.insert_chunk([1, -1], Chunk::new([1, -1]).set_bit((0, 0), true));
+        game.insert_chunk([-1, 1], Chunk::new([-1, 1]).set_bit((7, 7), true));
+        game.insert_chunk([1, 1], Chunk::new([1, 1]).set_bit((0, 7), false));
+        let corners = game.corners([0, 0]);
+        assert_eq!(corners, 0b0110_0000);
+        game.insert_chunk([-1, -1], Chunk::new([-1, -1]).set_bit((7, 0), true));
+        game.insert_chunk([1, -1], Chunk::new([1, -1]).set_bit((0, 0), false));
+        game.insert_chunk([-1, 1], Chunk::new([-1, 1]).set_bit((7, 7), true));
+        game.insert_chunk([1, 1], Chunk::new([1, 1]).set_bit((0, 7), false));
+        let corners = game.corners([0, 0]);
+        assert_eq!(corners, 0b1010_0000);
+        game.insert_chunk([-1, -1], Chunk::new([-1, -1]).set_bit((7, 0), false));
+        game.insert_chunk([1, -1], Chunk::new([1, -1]).set_bit((0, 0), false));
+        game.insert_chunk([-1, 1], Chunk::new([-1, 1]).set_bit((7, 7), false));
+        game.insert_chunk([1, 1], Chunk::new([1, 1]).set_bit((0, 7), false));
+        let corners = game.corners([0, 0]);
+        assert_eq!(corners, 0b0000_0000);
     }
 }
 
