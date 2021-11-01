@@ -94,37 +94,40 @@ impl Chunk {
             }
         }
     }
-    pub fn iterate(&mut self, edges: &Edges) -> Activate {
-        let mut activate = Activate {
-            left: false,
-            right: false,
-            top: false,
-            bottom: false,
-        };
-        let mut new_chunk: [u8; 8] = [0; 8];
-        for y in 0..8 {
-            let mut byte: u8 = 0b0000_0000;
-            for x in 0..8 {
-                if self.survive((x, y), &edges) {
-                    /* if i == 0 {
-                        activate.top = true;
-                    }
-                    if i == 7 {
-                        activate.bottom = true;
-                    }
-                    if j == 0 {
-                        activate.left = true;
-                    }
-                    if j == 7 {
-                        activate.right = true;
-                    } */
-                    byte |= (2 as u8).pow((7 - x) as u32)
-                };
-            }
-            new_chunk[y as usize] = byte;
+    pub fn iterate(&mut self, edges: &Edges) {
+        if !((edges.left == 0)
+            && (edges.right == 0)
+            && (edges.top == 0)
+            && (edges.bottom == 0)
+            && (edges.corners == 0))
+        {
+            self.active = true;
         }
-        self.chunk = new_chunk;
-        activate
+        if self.active {
+            let mut new_chunk: [u8; 8] = [0; 8];
+            let mut empty = true;
+            for y in 0..8 {
+                let mut byte: u8 = 0b0000_0000;
+                for x in 0..8 {
+                    if self.survive((x, y), &edges) {
+                        byte |= (2 as u8).pow((7 - x) as u32);
+                        empty = false;
+                    };
+                }
+                new_chunk[y as usize] = byte;
+            }
+            self.chunk = new_chunk;
+            if empty {
+                if (edges.left == 0)
+                    && (edges.right == 0)
+                    && (edges.top == 0)
+                    && (edges.bottom == 0)
+                    && (edges.corners == 0)
+                {
+                    self.active = false;
+                }
+            }
+        }
     }
     pub fn survive(&self, point: (i8, i8), edges: &Edges) -> bool {
         let mut count = 0;
@@ -269,11 +272,4 @@ pub struct Edges {
     pub top: u8,
     pub bottom: u8,
     pub corners: u8,
-}
-
-pub struct Activate {
-    pub left: bool,
-    pub right: bool,
-    pub top: bool,
-    pub bottom: bool,
 }

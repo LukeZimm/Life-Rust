@@ -1,6 +1,5 @@
 use std::collections::HashMap;
 
-use crate::chunk::Activate;
 use crate::chunk::Chunk;
 use crate::chunk::Edges;
 
@@ -133,30 +132,8 @@ impl Game {
             edge_map.insert(i.pos, edges);
         }
         for i in self.chunks() {
-            let activate = i.iterate(&edge_map.get(&i.pos).unwrap());
-            /* if activate.left {
-                activations.push([i.pos[0] - 1, i.pos[1]]);
-            }
-            if activate.right {
-                activations.push([i.pos[0] + 1, i.pos[1]]);
-            }
-            if activate.top {
-                activations.push([i.pos[0], i.pos[1] + 1]);
-            }
-            if activate.bottom {
-                activations.push([i.pos[0], i.pos[1] - 1]);
-            } */
+            i.iterate(&edge_map.get(&i.pos).unwrap());
         }
-        /* for i in activations {
-            match self.map.get_mut(&i) {
-                Some(j) => {
-                    j.set_active(true);
-                }
-                None => {
-                    self.map.insert(i, Chunk::new([0, 0]));
-                }
-            }
-        } */
     }
     pub fn set_chunk(&mut self, pos: [i32; 2], chunk: [u8; 8]) {
         self.map.get_mut(&pos).unwrap().set(chunk);
