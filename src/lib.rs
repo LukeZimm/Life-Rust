@@ -56,6 +56,28 @@ mod tests {
         assert_eq!(chunk.get_byte_at(3), 0b0001_0111);
     }
     #[test]
+    fn set_bit() {
+        let mut chunk = Chunk::new([0, 0])
+            .set_bit((0, 0), true)
+            .set_bit((1, 0), true)
+            .set_bit((0, 1), true)
+            .set_bit((2, 2), true);
+        assert_eq!(chunk.get_byte_at(0), 0b1100_0000);
+        assert_eq!(chunk.get_byte_at(1), 0b1000_0000);
+        assert_eq!(chunk.get_byte_at(2), 0b0010_0000);
+        chunk = chunk
+            .set_bit((0, 0), false)
+            .set_bit((2, 0), false)
+            .set_bit((2, 1), true);
+        assert_eq!(chunk.get_byte_at(0), 0b0100_0000);
+        assert_eq!(chunk.get_byte_at(1), 0b1010_0000);
+        chunk = chunk.set_bit((0, 0), false).set_bit((1, 0), true);
+        assert_eq!(chunk.get_byte_at(0), 0b0100_0000);
+        chunk.toggle_bit((0, 0));
+        chunk.toggle_bit((1, 0));
+        assert_eq!(chunk.get_byte_at(0), 0b1000_0000);
+    }
+    #[test]
     fn survive_simple() {
         let chunk = Chunk::from(
             [0, 0],

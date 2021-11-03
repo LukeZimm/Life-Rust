@@ -36,12 +36,13 @@ impl Chunk {
         self.chunk = chunk;
     }
     pub fn set_bit(mut self, pos: (u8, u8), val: bool) -> Self {
-        if val {
-            self.chunk[pos.1 as usize] |= (2 as u8).pow((7 - pos.0) as u32)
-        } else {
-            self.chunk[pos.1 as usize] &= (2 as u8).pow((7 - pos.0) as u32)
+        if val != self.get_bit_at_point((pos.0 as i8, pos.1 as i8)) {
+            self.chunk[pos.1 as usize] ^= (2 as u8).pow((7 - pos.0) as u32)
         }
         self
+    }
+    pub fn toggle_bit(&mut self, pos: (u8, u8)) {
+        self.chunk[pos.1 as usize] ^= (2 as u8).pow((7 - pos.0) as u32);
     }
     pub fn set_active(&mut self, val: bool) {
         self.active = val;
@@ -95,11 +96,18 @@ impl Chunk {
         }
     }
     pub fn iterate(&mut self, edges: &Edges) {
+        let mut sum: u16 = 0;
+        if !self.active {
+            for i in 0..8 {
+                sum += self.chunk[i] as u16;
+            }
+        }
         if !((edges.left == 0)
             && (edges.right == 0)
             && (edges.top == 0)
             && (edges.bottom == 0)
-            && (edges.corners == 0))
+            && (edges.corners == 0)
+            && (sum == 0))
         {
             self.active = true;
         }

@@ -3,6 +3,9 @@ use std::collections::HashMap;
 use crate::chunk::Chunk;
 use crate::chunk::Edges;
 
+use kiss3d::event::{Modifiers, MouseButton};
+use kiss3d::nalgebra::Point2;
+
 pub struct Game {
     pub map: HashMap<[i32; 2], Chunk>,
 }
@@ -21,6 +24,24 @@ impl Game {
         let mut map: HashMap<[i32; 2], Chunk> = HashMap::new();
         map.insert([0, 0], chunk);
         Game { map }
+    }
+    pub fn click(&mut self, sel_pos: Point2<f32>, button: MouseButton, modif: Modifiers) {
+        let chunk: [i32; 2] = [
+            (sel_pos.coords[0] / 80.0 + 0.5).floor() as i32,
+            (sel_pos.coords[1] / 80.0 + 0.5).floor() as i32,
+        ]; // add support for bit size
+           // println!("chunk: [{},{}]", chunk[0], chunk[1]);
+        let bit: [u8; 2] = [
+            (sel_pos.coords[0] / 10.0 - chunk[0] as f32 * 8.0 + 4.0).floor() as u8,
+            (-sel_pos.coords[1] / 10.0 + chunk[1] as f32 * 8.0 + 4.0).floor() as u8,
+        ];
+        // println!("bit: [{},{}]", bit[0], bit[1]);
+        match self.map.get_mut(&chunk) {
+            Some(i) => {
+                i.toggle_bit((bit[0], bit[1]));
+            }
+            None => {}
+        }
     }
     pub fn insert_chunk(&mut self, pos: [i32; 2], chunk: Chunk) {
         self.map.insert(pos, chunk);
