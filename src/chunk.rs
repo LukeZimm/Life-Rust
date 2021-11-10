@@ -5,31 +5,40 @@ pub struct Chunk {
     chunk: [u8; 8],
     nodes: Vec<kiss3d::scene::PlanarSceneNode>,
     active: bool,
-    pixel_size: f32,
+    pub bit_size: f32,
     pub pos: [i32; 2],
     center: (f32, f32),
+    relative_pos: (f32, f32),
 }
 impl Chunk {
     const COLORS: (Point3<f32>, Point3<f32>) =
         (Point3::new(1.0, 0.0, 0.0), Point3::new(0.0, 1.0, 0.0));
-    pub fn new(pos: [i32; 2]) -> Chunk {
+    pub fn new(pos: [i32; 2], bit_size: f32) -> Chunk {
         Chunk {
             chunk: [0b0000_0000; 8],
             nodes: Vec::new(),
             active: true,
-            pixel_size: 10.0,
+            bit_size,
             pos,
-            center: (pos[0] as f32 * 10.0 * 8.0, pos[1] as f32 * 10.0 * 8.0),
+            center: (
+                pos[0] as f32 * bit_size * 8.0,
+                pos[1] as f32 * bit_size * 8.0,
+            ),
+            relative_pos: (0.0, 0.0),
         }
     }
-    pub fn from(pos: [i32; 2], chunk: [u8; 8]) -> Chunk {
+    pub fn from(pos: [i32; 2], chunk: [u8; 8], bit_size: f32) -> Chunk {
         Chunk {
             chunk,
             nodes: Vec::new(),
             active: true,
-            pixel_size: 10.0,
+            bit_size,
             pos,
-            center: (pos[0] as f32 * 10.0 * 8.0, pos[1] as f32 * 10.0 * 8.0),
+            center: (
+                pos[0] as f32 * bit_size * 8.0,
+                pos[1] as f32 * bit_size * 8.0,
+            ),
+            relative_pos: (0.0, 0.0),
         }
     }
     pub fn set(&mut self, chunk: [u8; 8]) {
@@ -81,11 +90,17 @@ impl Chunk {
         }
         for x in 0..2 {
             for y in 0..2 {
-                let a = (self.pixel_size * 4.0 - 0.5) * 2.0 * (x as f32 - 0.5);
-                let b = (self.pixel_size * 4.0 - 0.5) * 2.0 * (y as f32 - 0.5);
+                let a = (self.bit_size * 4.0 - 0.25) * 2.0 * (x as f32 - 0.5);
+                let b = (self.bit_size * 4.0 - 0.25) * 2.0 * (y as f32 - 0.5);
                 window.draw_planar_line(
-                    &Point2::new(a + self.center.0, a + self.center.1),
-                    &Point2::new(b + self.center.0, -b + self.center.1),
+                    &Point2::new(
+                        a + self.center.0 + self.relative_pos.0 * self.bit_size,
+                        a + self.center.1 + self.relative_pos.1 * self.bit_size,
+                    ),
+                    &Point2::new(
+                        b + self.center.0 + self.relative_pos.0 * self.bit_size,
+                        -b + self.center.1 + self.relative_pos.1 * self.bit_size,
+                    ),
                     if self.active {
                         &Chunk::COLORS.1
                     } else {
@@ -227,15 +242,29 @@ impl Chunk {
     pub fn draw_byte(&mut self, byte: u8, y: usize, window: &mut kiss3d::window::Window) {
         for x in 0..8 {
             if Chunk::get_bit_at(byte, x) {
-                let mut c = window.add_rectangle(self.pixel_size, self.pixel_size);
+                let mut c = window.add_rectangle(self.bit_size, self.bit_size);
                 // c.set_color(0.0, 0.0, 0.0);
                 c.append_translation(&Translation2::new(
-                    (x as f32 - 3.5) * self.pixel_size + self.center.0,
-                    ((7 - y) as f32 - 3.5) * self.pixel_size + self.center.1,
+                    (x as f32 - 3.5) * self.bit_size
+                        + self.center.0
+                        + self.relative_pos.0 * self.bit_size,
+                    ((7 - y) as f32 - 3.5) * self.bit_size
+                        + self.center.1
+                        + self.relative_pos.1 * self.bit_size,
                 ));
                 self.nodes.push(c);
             };
         }
+    }
+    pub fn update_pos(&mut self, pos: (f32, f32)) {
+        self.relative_pos = (pos.0, pos.1);
+    }
+    pub fn update_zoom(&mut self, zoom: f32) {
+        self.bit_size = zoom;
+        self.center = (
+            self.pos[0] as f32 * zoom * 8.0,
+            self.pos[1] as f32 * zoom * 8.0,
+        );
     }
     pub fn get_bit_at(input: u8, n: u8) -> bool {
         let n = 7 - n;

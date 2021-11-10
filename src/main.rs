@@ -32,7 +32,7 @@ fn main() {
     for x in -3..4 {
         for y in -3..4 {
             if !(x == 0 && y == 0) {
-                game.insert_chunk([x, y], Chunk::new([x, y]));
+                game.insert_chunk([x, y], Chunk::new([x, y], 10.0));
             }
         }
     }
@@ -50,6 +50,7 @@ fn main() {
                 0b0000_0000,
                 0b0000_0000,
             ],
+            10.0,
         ),
     );
     game.insert_chunk(
@@ -66,6 +67,7 @@ fn main() {
                 0b0001_0000,
                 0b0000_1000,
             ],
+            10.0,
         ),
     );
     game.insert_chunk(
@@ -82,6 +84,7 @@ fn main() {
                 0b0100_0000,
                 0b1000_0000,
             ],
+            10.0,
         ),
     );
     game.insert_chunk(
@@ -98,6 +101,7 @@ fn main() {
                 0b0000_0000,
                 0b0000_0000,
             ],
+            10.0,
         ),
     );
     game.insert_chunk(
@@ -114,6 +118,7 @@ fn main() {
                 0b0100_0000,
                 0b0000_0000,
             ],
+            10.0,
         ),
     );
     game.insert_chunk(
@@ -130,6 +135,7 @@ fn main() {
                 0b0000_0000,
                 0b0000_0000,
             ],
+            10.0,
         ),
     );
     let mut last_pos = Point2::new(0.0f32, 0.0f32);
@@ -150,6 +156,7 @@ fn main() {
                 }
                 WindowEvent::Key(key, action, modif) => {
                     println!("key event {:?} on {:?} with {:?}", key, action, modif);
+                    // Play, Pause, Iterate and Clear
                     if key == kiss3d::event::Key::Space
                         && action == kiss3d::event::Action::Release
                         && modif == kiss3d::event::Modifiers::Control
@@ -162,9 +169,56 @@ fn main() {
                         game.iterate();
                     }
                     if key == kiss3d::event::Key::Back && action == kiss3d::event::Action::Release {
+                        // Backspace
                         for chunk in game.chunks().into_iter() {
                             chunk.set([0; 8]);
                         }
+                    }
+                    // Zooming
+                    if key == kiss3d::event::Key::Equals && action == kiss3d::event::Action::Press {
+                        // +
+                        game.zoom(true);
+                    }
+                    if key == kiss3d::event::Key::Minus && action == kiss3d::event::Action::Press {
+                        // -
+                        game.zoom(false);
+                    }
+                    // Arrow Keys
+                    if key == kiss3d::event::Key::Up && action == kiss3d::event::Action::Press {
+                        // Up
+                        let val = if modif == kiss3d::event::Modifiers::Shift {
+                            5.0
+                        } else {
+                            1.0
+                        };
+                        game.pos((0.0, val));
+                    }
+                    if key == kiss3d::event::Key::Down && action == kiss3d::event::Action::Press {
+                        // Down
+                        let val = if modif == kiss3d::event::Modifiers::Shift {
+                            5.0
+                        } else {
+                            1.0
+                        };
+                        game.pos((0.0, -val));
+                    }
+                    if key == kiss3d::event::Key::Left && action == kiss3d::event::Action::Press {
+                        // Left
+                        let val = if modif == kiss3d::event::Modifiers::Shift {
+                            5.0
+                        } else {
+                            1.0
+                        };
+                        game.pos((-val, 0.0));
+                    }
+                    if key == kiss3d::event::Key::Right && action == kiss3d::event::Action::Press {
+                        // Right
+                        let val = if modif == kiss3d::event::Modifiers::Shift {
+                            5.0
+                        } else {
+                            1.0
+                        };
+                        game.pos((val, 0.0));
                     }
                 }
                 WindowEvent::CursorPos(x, y, _modif) => {

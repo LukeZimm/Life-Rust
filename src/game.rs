@@ -8,32 +8,46 @@ use kiss3d::nalgebra::Point2;
 
 pub struct Game {
     pub map: HashMap<[i32; 2], Chunk>,
+    bit_size: f32,
+    relative_pos: (f32, f32),
 }
 impl Game {
     pub fn new() -> Game {
         let mut map: HashMap<[i32; 2], Chunk> = HashMap::new();
-        map.insert([0, 0], Chunk::new([0, 0]));
-        Game { map }
+        map.insert([0, 0], Chunk::new([0, 0], 10.0));
+        Game {
+            map,
+            bit_size: 10.0,
+            relative_pos: (0.0, 0.0),
+        }
     }
     pub fn from(chunk: [u8; 8]) -> Game {
         let mut map: HashMap<[i32; 2], Chunk> = HashMap::new();
-        map.insert([0, 0], Chunk::from([0, 0], chunk));
-        Game { map }
+        map.insert([0, 0], Chunk::from([0, 0], chunk, 10.0));
+        Game {
+            map,
+            bit_size: 10.0,
+            relative_pos: (0.0, 0.0),
+        }
     }
     pub fn from_chunk(chunk: Chunk) -> Game {
         let mut map: HashMap<[i32; 2], Chunk> = HashMap::new();
         map.insert([0, 0], chunk);
-        Game { map }
+        Game {
+            map,
+            bit_size: 10.0,
+            relative_pos: (0.0, 0.0),
+        }
     }
     pub fn click(&mut self, sel_pos: Point2<f32>, button: MouseButton, modif: Modifiers) {
         let chunk: [i32; 2] = [
-            (sel_pos.coords[0] / 80.0 + 0.5).floor() as i32,
-            (sel_pos.coords[1] / 80.0 + 0.5).floor() as i32,
+            (sel_pos.coords[0] / (self.bit_size * 8.0) + 0.5).floor() as i32,
+            (sel_pos.coords[1] / (self.bit_size * 8.0) + 0.5).floor() as i32,
         ]; // add support for bit size
            // println!("chunk: [{},{}]", chunk[0], chunk[1]);
         let bit: [u8; 2] = [
-            (sel_pos.coords[0] / 10.0 - chunk[0] as f32 * 8.0 + 4.0).floor() as u8,
-            (-sel_pos.coords[1] / 10.0 + chunk[1] as f32 * 8.0 + 4.0).floor() as u8,
+            (sel_pos.coords[0] / self.bit_size - chunk[0] as f32 * 8.0 + 4.0).floor() as u8,
+            (-sel_pos.coords[1] / self.bit_size + chunk[1] as f32 * 8.0 + 4.0).floor() as u8,
         ];
         // println!("bit: [{},{}]", bit[0], bit[1]);
         match self.map.get_mut(&chunk) {
@@ -41,6 +55,26 @@ impl Game {
                 i.toggle_bit((bit[0], bit[1]));
             }
             None => {}
+        }
+    }
+    pub fn pos(&mut self, pos: (f32, f32)) {
+        let relative_pos = (
+            self.relative_pos.0 + pos.0 * -10.0 / self.bit_size,
+            self.relative_pos.1 + pos.1 * -10.0 / self.bit_size,
+        );
+        self.relative_pos = relative_pos;
+        for chunk in self.chunks().into_iter() {
+            chunk.update_pos(relative_pos);
+        }
+    }
+    pub fn zoom(&mut self, zoom_in: bool) {
+        self.bit_size *= if zoom_in { 1.2 } else { 0.8 };
+        self.update_zoom();
+    }
+    pub fn update_zoom(&mut self) {
+        let size = self.bit_size;
+        for chunk in self.chunks().into_iter() {
+            chunk.update_zoom(size);
         }
     }
     pub fn insert_chunk(&mut self, pos: [i32; 2], chunk: Chunk) {
