@@ -2,7 +2,7 @@ use kiss3d::nalgebra::{Point2, Point3, Translation2};
 
 #[derive(Clone)]
 pub struct Chunk {
-    chunk: [u8; 8],
+    pub chunk: [u8; 8],
     nodes: Vec<kiss3d::scene::PlanarSceneNode>,
     active: bool,
     pub bit_size: f32,

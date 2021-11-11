@@ -6,6 +6,9 @@ use crate::chunk::Edges;
 use kiss3d::event::{Modifiers, MouseButton};
 use kiss3d::nalgebra::Point2;
 
+use std::fs::File;
+use std::io::prelude::*;
+
 pub struct Game {
     pub map: HashMap<[i32; 2], Chunk>,
     bit_size: f32,
@@ -193,4 +196,45 @@ impl Game {
     pub fn set_chunk(&mut self, pos: [i32; 2], chunk: [u8; 8]) {
         self.map.get_mut(&pos).unwrap().set(chunk);
     }
+    pub fn save(&mut self) -> std::io::Result<()> {
+        let mut file = File::create("save.cgl")?;
+        let mut data: Vec<u8> = vec![];
+        for chunk in self.chunks() {
+            let pos = chunk.pos;
+            let mut res1: Vec<u8> = [pos[0].to_ne_bytes(), pos[1].to_ne_bytes()].concat();
+            let mut res2: Vec<u8> = [res1, chunk.chunk.to_vec()].concat();
+            file.write_all(&res2)?;
+        }
+        println!("{:?}", file.metadata());
+        Ok(())
+    }
+    pub fn open(&mut self) -> std::io::Result<()> {
+        let mut file = File::open("save.cgl")?;
+        let mut bytes: Vec<u8> = vec![];
+        self.map = HashMap::new();
+        file.read_to_end(&mut bytes);
+        for i in 0..(bytes.len() / 16) {
+            let pos = (
+                i32::from_ne_bytes(clone_into_array(&bytes[i * 16..i * 16 + 4])),
+                i32::from_ne_bytes(clone_into_array(&bytes[i * 16 + 4..i * 16 + 8])),
+            );
+            let chunk: [u8; 8] = clone_into_array(&bytes[i * 16 + 8..i * 16 + 16]);
+            println!("pos: {:?}, data: {:?}", pos, chunk);
+            self.map
+                .insert([pos.0, pos.1], Chunk::from([pos.0, pos.1], chunk, 10.0));
+        }
+        Ok(())
+    }
+}
+
+use std::convert::AsMut;
+
+fn clone_into_array<A, T>(slice: &[T]) -> A
+where
+    A: Default + AsMut<[T]>,
+    T: Clone,
+{
+    let mut a = A::default();
+    <A as AsMut<[T]>>::as_mut(&mut a).clone_from_slice(slice);
+    a
 }

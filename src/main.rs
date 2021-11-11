@@ -220,6 +220,26 @@ fn main() {
                         };
                         game.pos((val, 0.0));
                     }
+                    // Ctrl Commands
+                    if key == kiss3d::event::Key::S
+                        && action == kiss3d::event::Action::Release
+                        && modif == kiss3d::event::Modifiers::Control
+                    {
+                        // Save
+                        game.save();
+                    }
+                    if key == kiss3d::event::Key::O
+                        && action == kiss3d::event::Action::Release
+                        && modif == kiss3d::event::Modifiers::Control
+                    {
+                        // Open
+                        match game.open() {
+                            Ok(t) => {}
+                            Err(e) => {
+                                println!("{:?}", e)
+                            }
+                        }
+                    }
                 }
                 WindowEvent::CursorPos(x, y, _modif) => {
                     last_pos = Point2::new(x as f32, y as f32);

@@ -7,3 +7,4 @@ edition = "2018"
 
 [dependencies]
 kiss3d = "*"
+nfd = "0.0.4"
