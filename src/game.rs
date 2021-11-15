@@ -43,14 +43,18 @@ impl Game {
         }
     }
     pub fn click(&mut self, sel_pos: Point2<f32>, button: MouseButton, modif: Modifiers) {
+        let pos = (
+            sel_pos.coords[0] - self.relative_pos.0 * self.bit_size,
+            sel_pos.coords[1] - self.relative_pos.1 * self.bit_size,
+        );
         let chunk: [i32; 2] = [
-            (sel_pos.coords[0] / (self.bit_size * 8.0) + 0.5).floor() as i32,
-            (sel_pos.coords[1] / (self.bit_size * 8.0) + 0.5).floor() as i32,
-        ]; // add support for bit size
-           // println!("chunk: [{},{}]", chunk[0], chunk[1]);
+            (pos.0 / (self.bit_size * 8.0) + 0.5).floor() as i32,
+            (pos.1 / (self.bit_size * 8.0) + 0.5).floor() as i32,
+        ]; // add support for positioning
+           //    println!("chunk: [{},{}]", chunk[0], chunk[1]);
         let bit: [u8; 2] = [
-            (sel_pos.coords[0] / self.bit_size - chunk[0] as f32 * 8.0 + 4.0).floor() as u8,
-            (-sel_pos.coords[1] / self.bit_size + chunk[1] as f32 * 8.0 + 4.0).floor() as u8,
+            (pos.0 / self.bit_size - chunk[0] as f32 * 8.0 + 4.0).floor() as u8,
+            (-pos.1 / self.bit_size + chunk[1] as f32 * 8.0 + 4.0).floor() as u8,
         ];
         // println!("bit: [{},{}]", bit[0], bit[1]);
         match self.map.get_mut(&chunk) {
@@ -228,7 +232,7 @@ impl Game {
                 i32::from_ne_bytes(clone_into_array(&bytes[i * 16 + 4..i * 16 + 8])),
             );
             let chunk: [u8; 8] = clone_into_array(&bytes[i * 16 + 8..i * 16 + 16]);
-            println!("pos: {:?}, data: {:?}", pos, chunk);
+            // println!("pos: {:?}, data: {:?}", pos, chunk);
             self.map
                 .insert([pos.0, pos.1], Chunk::from([pos.0, pos.1], chunk, 10.0));
         }
