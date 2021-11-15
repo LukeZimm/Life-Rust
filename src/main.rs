@@ -233,7 +233,7 @@ fn main() {
                         && modif == kiss3d::event::Modifiers::Control
                     {
                         // Open
-                        match game.open() {
+                        match game.open(&mut window) {
                             Ok(t) => {}
                             Err(e) => {
                                 println!("{:?}", e)

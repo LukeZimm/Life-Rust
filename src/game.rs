@@ -208,11 +208,20 @@ impl Game {
         println!("{:?}", file.metadata());
         Ok(())
     }
-    pub fn open(&mut self) -> std::io::Result<()> {
+    pub fn open(&mut self, window: &mut kiss3d::window::Window) -> std::io::Result<()> {
         let mut file = File::open("save.cgl")?;
         let mut bytes: Vec<u8> = vec![];
+        for chunk in self.chunks() {
+            chunk.remove_nodes(window);
+        }
         self.map = HashMap::new();
-        file.read_to_end(&mut bytes);
+        match file.read_to_end(&mut bytes) {
+            Ok(_usize) => {}
+            Err(e) => {
+                println!("{}", e);
+                return Err(e);
+            }
+        }
         for i in 0..(bytes.len() / 16) {
             let pos = (
                 i32::from_ne_bytes(clone_into_array(&bytes[i * 16..i * 16 + 4])),
@@ -223,6 +232,8 @@ impl Game {
             self.map
                 .insert([pos.0, pos.1], Chunk::from([pos.0, pos.1], chunk, 10.0));
         }
+        self.relative_pos = (0.0, 0.0);
+        self.bit_size = 10.0;
         Ok(())
     }
 }
