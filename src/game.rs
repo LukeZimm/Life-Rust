@@ -2,6 +2,7 @@ use std::collections::HashMap;
 
 use crate::chunk::Chunk;
 use crate::chunk::Edges;
+use crate::chunk::HoverChunk;
 
 use kiss3d::event::{Modifiers, MouseButton};
 use kiss3d::nalgebra::Point2;
@@ -13,33 +14,41 @@ pub struct Game {
     pub map: HashMap<[i32; 2], Chunk>,
     bit_size: f32,
     relative_pos: (f32, f32),
+    debug: bool,
+    hover_chunk: HoverChunk,
 }
 impl Game {
-    pub fn new() -> Game {
+    pub fn new(debug: bool) -> Game {
         let mut map: HashMap<[i32; 2], Chunk> = HashMap::new();
-        map.insert([0, 0], Chunk::new([0, 0], 10.0));
+        map.insert([0, 0], Chunk::new([0, 0], 10.0, (0.0, 0.0)));
         Game {
             map,
             bit_size: 10.0,
             relative_pos: (0.0, 0.0),
+            debug,
+            hover_chunk: HoverChunk::new([0, 0], 10.0, (0.0, 0.0)),
         }
     }
-    pub fn from(chunk: [u8; 8]) -> Game {
+    pub fn from(chunk: [u8; 8], debug: bool) -> Game {
         let mut map: HashMap<[i32; 2], Chunk> = HashMap::new();
-        map.insert([0, 0], Chunk::from([0, 0], chunk, 10.0));
+        map.insert([0, 0], Chunk::from([0, 0], chunk, 10.0, (0.0, 0.0)));
         Game {
             map,
             bit_size: 10.0,
             relative_pos: (0.0, 0.0),
+            debug,
+            hover_chunk: HoverChunk::new([0, 0], 10.0, (0.0, 0.0)),
         }
     }
-    pub fn from_chunk(chunk: Chunk) -> Game {
+    pub fn from_chunk(chunk: Chunk, debug: bool) -> Game {
         let mut map: HashMap<[i32; 2], Chunk> = HashMap::new();
         map.insert([0, 0], chunk);
         Game {
             map,
             bit_size: 10.0,
             relative_pos: (0.0, 0.0),
+            debug,
+            hover_chunk: HoverChunk::new([0, 0], 10.0, (0.0, 0.0)),
         }
     }
     pub fn click(&mut self, sel_pos: Point2<f32>, button: MouseButton, modif: Modifiers) {
@@ -50,18 +59,32 @@ impl Game {
         let chunk: [i32; 2] = [
             (pos.0 / (self.bit_size * 8.0) + 0.5).floor() as i32,
             (pos.1 / (self.bit_size * 8.0) + 0.5).floor() as i32,
-        ]; // add support for positioning
-           //    println!("chunk: [{},{}]", chunk[0], chunk[1]);
+        ];
         let bit: [u8; 2] = [
             (pos.0 / self.bit_size - chunk[0] as f32 * 8.0 + 4.0).floor() as u8,
             (-pos.1 / self.bit_size + chunk[1] as f32 * 8.0 + 4.0).floor() as u8,
         ];
-        // println!("bit: [{},{}]", bit[0], bit[1]);
+        println!("{:?} {:?}", pos, chunk);
         match self.map.get_mut(&chunk) {
             Some(i) => {
                 i.toggle_bit((bit[0], bit[1]));
             }
             None => {}
+        }
+    }
+    pub fn hover(&mut self, hover_pos: Point2<f32>) {
+        let pos = (
+            hover_pos.coords[0] - self.relative_pos.0 * self.bit_size,
+            hover_pos.coords[1] - self.relative_pos.1 * self.bit_size,
+        );
+        let chunk: [i32; 2] = [
+            (pos.0 / (self.bit_size * 8.0) + 0.5).floor() as i32,
+            (pos.1 / (self.bit_size * 8.0) + 0.5).floor() as i32,
+        ];
+        // println!("{:?} {:?}", pos, chunk);
+        match self.map.get(&chunk) {
+            Some(_) => self.hover_chunk.set_inactive(),
+            None => self.hover_chunk.update_pos(chunk),
         }
     }
     pub fn pos(&mut self, pos: (f32, f32)) {
@@ -73,6 +96,7 @@ impl Game {
         for chunk in self.chunks().into_iter() {
             chunk.update_pos(relative_pos);
         }
+        self.hover_chunk.update_relative_pos(relative_pos);
     }
     pub fn zoom(&mut self, zoom_in: bool) {
         self.bit_size *= if zoom_in { 1.2 } else { 0.8 };
@@ -83,14 +107,17 @@ impl Game {
         for chunk in self.chunks().into_iter() {
             chunk.update_zoom(size);
         }
+        self.hover_chunk.update_zoom(size);
     }
     pub fn insert_chunk(&mut self, pos: [i32; 2], chunk: Chunk) {
         self.map.insert(pos, chunk);
     }
     pub fn draw(&mut self, window: &mut kiss3d::window::Window) {
+        let debug = self.debug;
         for i in self.chunks() {
-            i.draw(window);
+            i.draw(window, debug);
         }
+        self.hover_chunk.draw(window);
     }
     pub fn chunks(&mut self) -> Vec<&mut Chunk> {
         let mut vec: Vec<&mut Chunk> = Vec::new();
@@ -184,7 +211,7 @@ impl Game {
         }
         int
     }
-    pub fn iterate(&mut self) {
+    pub fn iterate(&mut self, window: &mut kiss3d::window::Window) {
         let mut activations: Vec<[i32; 2]> = Vec::new();
         let mut map_clone = self.map.clone();
         let mut edge_map: HashMap<[i32; 2], Edges> = HashMap::new();
@@ -193,8 +220,52 @@ impl Game {
             let edges = self.edges(i.pos, corners);
             edge_map.insert(i.pos, edges);
         }
+        let mut stale_chunks: Vec<[i32; 2]> = Vec::new();
         for i in self.chunks() {
-            i.iterate(&edge_map.get(&i.pos).unwrap());
+            let v = i.iterate(&edge_map.get(&i.pos).unwrap()); // interpret activations
+            Game::interpret_activations(v, &mut activations, i.pos);
+            if !i.active {
+                i.remove_nodes(window);
+                stale_chunks.push(i.pos);
+            }
+        }
+        for i in stale_chunks {
+            self.map.remove(&i);
+        }
+        for i in activations {
+            match self.map.get(&i) {
+                Some(_) => {}
+                None => {
+                    self.map
+                        .insert(i, Chunk::new(i, self.bit_size, self.relative_pos));
+                }
+            }
+        }
+    }
+    fn interpret_activations(v: u8, activations: &mut Vec<[i32; 2]>, pos: [i32; 2]) {
+        if Chunk::get_bit_at(v, 0) {
+            activations.push([pos[0] - 1, pos[1] + 1])
+        }
+        if Chunk::get_bit_at(v, 1) {
+            activations.push([pos[0], pos[1] + 1])
+        }
+        if Chunk::get_bit_at(v, 2) {
+            activations.push([pos[0] + 1, pos[1] + 1])
+        }
+        if Chunk::get_bit_at(v, 3) {
+            activations.push([pos[0] - 1, pos[1]])
+        }
+        if Chunk::get_bit_at(v, 4) {
+            activations.push([pos[0] + 1, pos[1]])
+        }
+        if Chunk::get_bit_at(v, 5) {
+            activations.push([pos[0] - 1, pos[1] - 1])
+        }
+        if Chunk::get_bit_at(v, 6) {
+            activations.push([pos[0], pos[1] - 1])
+        }
+        if Chunk::get_bit_at(v, 7) {
+            activations.push([pos[0] + 1, pos[1] - 1])
         }
     }
     pub fn set_chunk(&mut self, pos: [i32; 2], chunk: [u8; 8]) {
@@ -233,8 +304,10 @@ impl Game {
             );
             let chunk: [u8; 8] = clone_into_array(&bytes[i * 16 + 8..i * 16 + 16]);
             // println!("pos: {:?}, data: {:?}", pos, chunk);
-            self.map
-                .insert([pos.0, pos.1], Chunk::from([pos.0, pos.1], chunk, 10.0));
+            self.map.insert(
+                [pos.0, pos.1],
+                Chunk::from([pos.0, pos.1], chunk, 10.0, self.relative_pos),
+            );
         }
         self.relative_pos = (0.0, 0.0);
         self.bit_size = 10.0;

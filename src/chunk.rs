@@ -4,7 +4,7 @@ use kiss3d::nalgebra::{Point2, Point3, Translation2};
 pub struct Chunk {
     pub chunk: [u8; 8],
     nodes: Vec<kiss3d::scene::PlanarSceneNode>,
-    active: bool,
+    pub active: bool,
     pub bit_size: f32,
     pub pos: [i32; 2],
     center: (f32, f32),
@@ -13,7 +13,7 @@ pub struct Chunk {
 impl Chunk {
     const COLORS: (Point3<f32>, Point3<f32>) =
         (Point3::new(1.0, 0.0, 0.0), Point3::new(0.0, 1.0, 0.0));
-    pub fn new(pos: [i32; 2], bit_size: f32) -> Chunk {
+    pub fn new(pos: [i32; 2], bit_size: f32, relative_pos: (f32, f32)) -> Chunk {
         Chunk {
             chunk: [0b0000_0000; 8],
             nodes: Vec::new(),
@@ -24,10 +24,10 @@ impl Chunk {
                 pos[0] as f32 * bit_size * 8.0,
                 pos[1] as f32 * bit_size * 8.0,
             ),
-            relative_pos: (0.0, 0.0),
+            relative_pos,
         }
     }
-    pub fn from(pos: [i32; 2], chunk: [u8; 8], bit_size: f32) -> Chunk {
+    pub fn from(pos: [i32; 2], chunk: [u8; 8], bit_size: f32, relative_pos: (f32, f32)) -> Chunk {
         Chunk {
             chunk,
             nodes: Vec::new(),
@@ -38,7 +38,7 @@ impl Chunk {
                 pos[0] as f32 * bit_size * 8.0,
                 pos[1] as f32 * bit_size * 8.0,
             ),
-            relative_pos: (0.0, 0.0),
+            relative_pos,
         }
     }
     pub fn set(&mut self, chunk: [u8; 8]) {
@@ -83,35 +83,38 @@ impl Chunk {
         }
         out
     }
-    pub fn draw(&mut self, window: &mut kiss3d::window::Window) {
+    pub fn draw(&mut self, window: &mut kiss3d::window::Window, debug: bool) {
         self.remove_nodes(window);
         for y in 0..8 {
             self.draw_byte(self.chunk[y], y, window);
         }
-        for x in 0..2 {
-            for y in 0..2 {
-                let a = (self.bit_size * 4.0 - 0.25) * 2.0 * (x as f32 - 0.5);
-                let b = (self.bit_size * 4.0 - 0.25) * 2.0 * (y as f32 - 0.5);
-                window.draw_planar_line(
-                    &Point2::new(
-                        a + self.center.0 + self.relative_pos.0 * self.bit_size,
-                        a + self.center.1 + self.relative_pos.1 * self.bit_size,
-                    ),
-                    &Point2::new(
-                        b + self.center.0 + self.relative_pos.0 * self.bit_size,
-                        -b + self.center.1 + self.relative_pos.1 * self.bit_size,
-                    ),
-                    if self.active {
-                        &Chunk::COLORS.1
-                    } else {
-                        &Chunk::COLORS.0
-                    },
-                );
+        if debug {
+            for x in 0..2 {
+                for y in 0..2 {
+                    let a = (self.bit_size * 4.0 - 0.25) * 2.0 * (x as f32 - 0.5);
+                    let b = (self.bit_size * 4.0 - 0.25) * 2.0 * (y as f32 - 0.5);
+                    window.draw_planar_line(
+                        &Point2::new(
+                            a + self.center.0 + self.relative_pos.0 * self.bit_size,
+                            a + self.center.1 + self.relative_pos.1 * self.bit_size,
+                        ),
+                        &Point2::new(
+                            b + self.center.0 + self.relative_pos.0 * self.bit_size,
+                            -b + self.center.1 + self.relative_pos.1 * self.bit_size,
+                        ),
+                        if self.active {
+                            &Chunk::COLORS.1
+                        } else {
+                            &Chunk::COLORS.0
+                        },
+                    );
+                }
             }
         }
     }
-    pub fn iterate(&mut self, edges: &Edges) {
+    pub fn iterate(&mut self, edges: &Edges) -> u8 {
         let mut sum: u16 = 0;
+        let mut activations: u8 = 0;
         if !self.active {
             for i in 0..8 {
                 sum += self.chunk[i] as u16;
@@ -135,6 +138,7 @@ impl Chunk {
                     if self.survive((x, y), &edges) {
                         byte |= (2 as u8).pow((7 - x) as u32);
                         empty = false;
+                        activations = Chunk::set_activations(x as u8, y as u8, activations);
                     };
                 }
                 new_chunk[y as usize] = byte;
@@ -151,6 +155,9 @@ impl Chunk {
                 }
             }
         }
+        /* print!("({},{}): ", self.pos[0], self.pos[1]);
+        Chunk::print_byte(activations); */
+        activations
     }
     pub fn survive(&self, point: (i8, i8), edges: &Edges) -> bool {
         let mut count = 0;
@@ -301,6 +308,40 @@ impl Chunk {
             println!();
         }
     }
+    pub fn print_byte(byte: u8) {
+        for i in 0..7 {
+            print!("{}", if Chunk::get_bit_at(byte, i) { 1 } else { 0 });
+        }
+        println!();
+    }
+    pub fn set_activations(x: u8, y: u8, activations: u8) -> u8 {
+        let mut v: u8 = activations;
+        if x == 0 {
+            v |= 0b0001_0000;
+            if y == 0 {
+                v |= 0b1000_0000;
+            }
+            if y == 7 {
+                v |= 0b0000_0100;
+            }
+        }
+        if x == 7 {
+            v |= 0b0000_1000;
+            if y == 0 {
+                v |= 0b0010_0000;
+            }
+            if y == 7 {
+                v |= 0b0000_0001;
+            }
+        }
+        if y == 0 {
+            v |= 0b0100_0000;
+        }
+        if y == 7 {
+            v |= 0b0000_0010;
+        }
+        v
+    }
 }
 
 pub struct Edges {
@@ -309,4 +350,80 @@ pub struct Edges {
     pub top: u8,
     pub bottom: u8,
     pub corners: u8,
+}
+
+pub struct HoverChunk {
+    nodes: Vec<kiss3d::scene::PlanarSceneNode>,
+    active: bool,
+    pub bit_size: f32,
+    pub pos: [i32; 2],
+    center: (f32, f32),
+    relative_pos: (f32, f32),
+}
+impl HoverChunk {
+    pub fn new(pos: [i32; 2], bit_size: f32, relative_pos: (f32, f32)) -> HoverChunk {
+        HoverChunk {
+            nodes: Vec::new(),
+            active: false,
+            bit_size,
+            pos,
+            center: (
+                pos[0] as f32 * bit_size * 8.0,
+                pos[1] as f32 * bit_size * 8.0,
+            ),
+            relative_pos,
+        }
+    }
+    pub fn draw(&mut self, window: &mut kiss3d::window::Window) {
+        self.remove_nodes(window);
+        if self.active {
+            // println!("drawing at pt: ({},{})", self.center.0, self.center.1);
+            for x in 0..2 {
+                for y in 0..2 {
+                    let a = (self.bit_size * 4.0 - 0.25) * 2.0 * (x as f32 - 0.5);
+                    let b = (self.bit_size * 4.0 - 0.25) * 2.0 * (y as f32 - 0.5);
+                    window.draw_planar_line(
+                        &Point2::new(
+                            a + self.center.0 + self.relative_pos.0 * self.bit_size,
+                            a + self.center.1 + self.relative_pos.1 * self.bit_size,
+                        ),
+                        &Point2::new(
+                            b + self.center.0 + self.relative_pos.0 * self.bit_size,
+                            -b + self.center.1 + self.relative_pos.1 * self.bit_size,
+                        ),
+                        &Point3::new(0.0, 0.25, 0.0),
+                    );
+                }
+            }
+        }
+    }
+    pub fn remove_nodes(&mut self, window: &mut kiss3d::window::Window) {
+        for i in 0..self.nodes.len() {
+            window.remove_planar_node(&mut self.nodes[i]);
+        }
+        self.nodes.clear();
+    }
+    pub fn update_relative_pos(&mut self, relative_pos: (f32, f32)) {
+        self.active = true;
+        self.relative_pos = relative_pos;
+    }
+    pub fn update_pos(&mut self, pos: [i32; 2]) {
+        self.active = true;
+        self.pos = pos;
+        self.center = (
+            pos[0] as f32 * self.bit_size * 8.0,
+            pos[1] as f32 * self.bit_size * 8.0,
+        );
+    }
+    pub fn update_zoom(&mut self, zoom: f32) {
+        self.active = true;
+        self.bit_size = zoom;
+        self.center = (
+            self.pos[0] as f32 * zoom * 8.0,
+            self.pos[1] as f32 * zoom * 8.0,
+        );
+    }
+    pub fn set_inactive(&mut self) {
+        self.active = false
+    }
 }

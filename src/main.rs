@@ -19,20 +19,23 @@ fn main() {
     let mut window = Window::new("Conway's Game of Life");
     let mut camera = kiss3d::planar_camera::FixedView::new();
     window.set_light(Light::StickToCamera);
-    let mut game = Game::from([
-        0b0000_0000,
-        0b0000_0000,
-        0b0000_0000,
-        0b0000_0000,
-        0b0000_0000,
-        0b0000_0000,
-        0b0000_0000,
-        0b0000_0000,
-    ]);
+    let mut game = Game::from(
+        [
+            0b0000_0000,
+            0b0000_0000,
+            0b0000_0000,
+            0b0000_0000,
+            0b0000_0000,
+            0b0000_0000,
+            0b0000_0000,
+            0b0000_0000,
+        ],
+        true,
+    );
     for x in -3..4 {
         for y in -3..4 {
             if !(x == 0 && y == 0) {
-                game.insert_chunk([x, y], Chunk::new([x, y], 10.0));
+                game.insert_chunk([x, y], Chunk::new([x, y], 10.0, (0.0, 0.0)));
             }
         }
     }
@@ -51,6 +54,7 @@ fn main() {
                 0b0000_0000,
             ],
             10.0,
+            (0.0, 0.0),
         ),
     );
     game.insert_chunk(
@@ -68,6 +72,7 @@ fn main() {
                 0b0000_1000,
             ],
             10.0,
+            (0.0, 0.0),
         ),
     );
     game.insert_chunk(
@@ -85,6 +90,7 @@ fn main() {
                 0b1000_0000,
             ],
             10.0,
+            (0.0, 0.0),
         ),
     );
     game.insert_chunk(
@@ -102,6 +108,7 @@ fn main() {
                 0b0000_0000,
             ],
             10.0,
+            (0.0, 0.0),
         ),
     );
     game.insert_chunk(
@@ -119,6 +126,7 @@ fn main() {
                 0b0000_0000,
             ],
             10.0,
+            (0.0, 0.0),
         ),
     );
     game.insert_chunk(
@@ -136,6 +144,7 @@ fn main() {
                 0b0000_0000,
             ],
             10.0,
+            (0.0, 0.0),
         ),
     );
     let mut last_pos = Point2::new(0.0f32, 0.0f32);
@@ -145,6 +154,13 @@ fn main() {
     while window.render_with(None, Some(&mut camera), None) {
         for event in window.events().iter() {
             match event.value {
+                WindowEvent::CursorPos(x, y, _modif) => {
+                    let window_size =
+                        Vector2::new(window.size()[0] as f32, window.size()[1] as f32);
+                    last_pos = Point2::new(x as f32, y as f32);
+                    sel_pos = camera.unproject(&last_pos, &window_size);
+                    game.hover(sel_pos)
+                }
                 WindowEvent::MouseButton(button, Action::Press, modif) => {
                     // println!("mouse press event on {:?} with {:?}", button, modif);
                     let window_size =
@@ -166,7 +182,7 @@ fn main() {
                         && action == kiss3d::event::Action::Release
                     {
                         run = false;
-                        game.iterate();
+                        game.iterate(&mut window);
                     }
                     if key == kiss3d::event::Key::Back && action == kiss3d::event::Action::Release {
                         // Backspace
@@ -256,8 +272,8 @@ fn main() {
         }
         game.draw(&mut window);
         if run {
-            game.iterate();
-            sleep(Duration::from_millis(100)); // write a better alternative
+            game.iterate(&mut window);
+            // sleep(Duration::from_millis(100)); // write a better alternative
         }
     }
 }
