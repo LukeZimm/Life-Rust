@@ -69,7 +69,14 @@ impl Game {
             Some(i) => {
                 i.toggle_bit((bit[0], bit[1]));
             }
-            None => {}
+            None => {
+                let mut newchunk: Chunk = Chunk::new(chunk, self.bit_size, self.relative_pos);
+                newchunk.toggle_bit((bit[0], bit[1]));
+                self.map.insert(
+                    chunk,
+                    newchunk,
+                );
+            }
         }
     }
     pub fn hover(&mut self, hover_pos: Point2<f32>) {
